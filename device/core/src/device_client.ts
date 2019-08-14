@@ -9,7 +9,7 @@ const debug = dbg('azure-iot-device:DeviceClient');
 
 import { AuthenticationProvider, RetryOperation, ConnectionString, results, Callback, ErrorCallback, callbackToPromise } from 'azure-iot-common';
 import { InternalClient, DeviceTransport } from './internal_client';
-import { BlobUploadClient } from './blob_upload';
+import { BlobUploadClient, UploadParams, BlobUploadResult } from './blob_upload';
 import { SharedAccessSignatureAuthenticationProvider } from './sas_authentication_provider';
 import { X509AuthenticationProvider } from './x509_authentication_provider';
 import { SharedAccessKeyAuthenticationProvider } from './sak_authentication_provider';
@@ -30,7 +30,9 @@ function safeCallback(callback?: (err?: Error, result?: any) => void, error?: Er
 export class Client extends InternalClient {
   private _c2dEnabled: boolean;
   private _deviceDisconnectHandler: (err?: Error, result?: any) => void;
-  private blobUploadClient: BlobUploadClient; // Casing is wrong and should be corrected.
+  private _blobUploadClient: BlobUploadClient;
+  private _blobStorageUploadParams: UploadParams;
+
   /**
    * @constructor
    * @param {Object}  transport         An object that implements the interface
@@ -41,7 +43,7 @@ export class Client extends InternalClient {
    */
   constructor(transport: DeviceTransport, connStr?: string, blobUploadClient?: BlobUploadClient) {
     super(transport, connStr);
-    this.blobUploadClient = blobUploadClient;
+    this._blobUploadClient = blobUploadClient;
     this._c2dEnabled = false;
 
     this.on('removeListener', (eventName) => {
@@ -111,9 +113,9 @@ export class Client extends InternalClient {
   setOptions(options: DeviceClientOptions): Promise<results.TransportConfigured>;
   setOptions(options: DeviceClientOptions, done?: Callback<results.TransportConfigured>): Promise<results.TransportConfigured> | void {
     if (!options) throw new ReferenceError('options cannot be falsy.');
-    if (this.blobUploadClient) {
+    if (this._blobUploadClient) {
       /*Codes_SRS_NODE_DEVICE_CLIENT_99_103: [The `setOptions` method shall set `blobUploadClient` options.]*/
-      this.blobUploadClient.setOptions(options);
+      this._blobUploadClient.setOptions(options);
     }
     return super.setOptions(options, done);
   }
@@ -171,12 +173,56 @@ export class Client extends InternalClient {
       retryOp.retry((opCallback) => {
         /*Codes_SRS_NODE_DEVICE_CLIENT_16_040: [The `uploadToBlob` method shall call the `_callback` callback with an `Error` object if the upload fails.]*/
         /*Codes_SRS_NODE_DEVICE_CLIENT_16_041: [The `uploadToBlob` method shall call the `_callback` callback no parameters if the upload succeeds.]*/
-        this.blobUploadClient.uploadToBlob(blobName, stream, streamLength, opCallback);
+        this._blobUploadClient.uploadToBlob(blobName, stream, streamLength, opCallback);
       }, (err, result) => {
         safeCallback(_callback, err, result);
       });
     }, callback);
   }
+
+  /**
+   * @description      The `uploadToBlob` method uploads a stream to a blob.
+   *
+   * @param {String}   blobName         The name to use for the blob that will be created with the content of the stream.
+   * @param {Stream}   stream           The data to that should be uploaded to the blob.
+   * @param {Number}   streamLength     The size of the data to that should be uploaded to the blob.
+   * @param {ErrorCallback} [done]      Optional callback to call when the upload is complete.
+   * @returns {Promise<void> | void}    Promise if no callback function was passed, void otherwise.
+   *
+   * @throws {ReferenceException} If blobName or stream or streamLength is falsy.
+   */
+  getBlobStorageSharedAccessSignature(blobName: string, callback: Callback<UploadParams>): void;
+  getBlobStorageSharedAccessSignature(blobName: string): Promise<UploadParams>;
+  getBlobStorageSharedAccessSignature(blobName: string, callback?: Callback<UploadParams>): Promise<UploadParams> | void {
+    return callbackToPromise((_callback) => {
+      const retryOp = new RetryOperation(this._retryPolicy, this._maxOperationTimeout);
+      retryOp.retry((opCallback) => {
+        this._blobUploadClient.clientFileUploadApi.getBlobSharedAccessSignature(blobName, opCallback);
+      }, (err, result) => {
+        if (!err) {
+          debug('got blob storage shared access signature.');
+          this._blobStorageUploadParams = result;
+        } else {
+          debug('Could not obtain blob shared access signature.');
+        }
+        safeCallback(_callback, err);
+      });
+    }, callback);
+  }
+
+  notifyUploadComplete(uploadResult: BlobUploadResult, callback: ErrorCallback): void;
+  notifyUploadComplete(uploadResult: BlobUploadResult): Promise<void>;
+  notifyUploadComplete(uploadResult: BlobUploadResult, callback?: ErrorCallback): Promise<void> | void {
+    return callbackToPromise((_callback) => {
+      const retryOp = new RetryOperation(this._retryPolicy, this._maxOperationTimeout);
+      retryOp.retry((opCallback) => {
+        this._blobUploadClient.clientFileUploadApi.notifyUploadComplete(this._blobStorageUploadParams.correlationId, uploadResult, opCallback);
+      }, (err) => {
+        safeCallback(_callback, err);
+      });
+    }, callback);
+  }
+
 
   private _enableC2D(callback: (err?: Error) => void): void {
     debug('_c2dEnabled is: ' + this._c2dEnabled);

@@ -3,5 +3,6 @@
 
 'use strict';
 
-export { BlobUploadClient } from './blob_upload_client';
+export { BlobUploadClient, UploadParams } from './blob_upload_client';
 export { BlobSasError, BlobUploadNotificationError } from './blob_upload_errors';
+export { BlobUploadResult } from './blob_upload_result';

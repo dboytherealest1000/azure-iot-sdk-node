@@ -55,8 +55,8 @@ export interface BlobUpload {
  * @private
  */
 export class BlobUploadClient implements BlobUpload {
+  public clientFileUploadApi: FileUpload;
   private _authenticationProvider: AuthenticationProvider;
-  private _fileUploadApi: FileUpload;
   private _blobUploader: BlobUploader;
 
   constructor(authenticationProvider: AuthenticationProvider, fileUploadApi?: FileUpload, blobUploader?: BlobUploader) {
@@ -65,16 +65,16 @@ export class BlobUploadClient implements BlobUpload {
     this._authenticationProvider = authenticationProvider;
 
     /*Codes_SRS_NODE_DEVICE_BLOB_UPLOAD_CLIENT_16_002: [If specified, `BlobUploadClient` shall use the `fileUploadApi` passed as a parameter instead of the default one.]*/
-    this._fileUploadApi = fileUploadApi ? fileUploadApi : new DefaultFileUploadApi(this._authenticationProvider);
+    this.clientFileUploadApi = fileUploadApi ? fileUploadApi : new DefaultFileUploadApi(this._authenticationProvider);
 
     /*Codes_SRS_NODE_DEVICE_BLOB_UPLOAD_CLIENT_16_003: [If specified, `BlobUploadClient` shall use the `blobUploader` passed as a parameter instead of the default one.]*/
     this._blobUploader = blobUploader ? blobUploader : new DefaultBlobUploader();
   }
 
   setOptions(options: any): void {
-    if (this._fileUploadApi) {
+    if (this.clientFileUploadApi) {
       /*Codes_SRS_NODE_DEVICE_BLOB_UPLOAD_CLIENT_99_011: [`setOptions` shall set `fileUploadApi` options.]*/
-      this._fileUploadApi.setOptions(options);
+      this.clientFileUploadApi.setOptions(options);
     }
   }
 
@@ -83,7 +83,7 @@ export class BlobUploadClient implements BlobUpload {
   uploadToBlob(blobName: string, stream: Stream, streamLength: number, done?: ErrorCallback): Promise<void> | void {
     return errorCallbackToPromise((_callback) => {
       /*Codes_SRS_NODE_DEVICE_BLOB_UPLOAD_CLIENT_16_004: [`uploadToBlob` shall obtain a blob SAS token using the IoT Hub service file upload API endpoint.]*/
-      this._fileUploadApi.getBlobSharedAccessSignature(blobName, (err, uploadParams) => {
+      this.clientFileUploadApi.getBlobSharedAccessSignature(blobName, (err, uploadParams) => {
         if (err) {
           /*Codes_SRS_NODE_DEVICE_BLOB_UPLOAD_CLIENT_16_005: [`uploadToBlob` shall call the `_callback` callback with a `BlobSasError` parameter if retrieving the SAS token fails.]*/
           let error = new errors.BlobSasError('Could not obtain blob shared access signature.');
@@ -93,8 +93,8 @@ export class BlobUploadClient implements BlobUpload {
           /*Codes_SRS_NODE_DEVICE_BLOB_UPLOAD_CLIENT_16_006: [`uploadToBlob` shall upload the stream to the specified blob using its BlobUploader instance.]*/
           this._blobUploader.uploadToBlob(uploadParams, stream, streamLength, (err, body, result) => {
             const uploadResult = BlobUploadResult.fromAzureStorageCallbackArgs(err, body, result);
-            /*Codes_SRS_NODE_DEVICE_BLOB_UPLOAD_CLIENT_41_001: [`uploadToBlob` shall notify the result of a blob upload to the IoT Hub service using the file upload API endpoint, regardless of the data transfer callback's error status.]*/
-            this._fileUploadApi.notifyUploadComplete(uploadParams.correlationId, uploadResult, (err) => {
+            /*Codes_SRS_NODE_DEVICE_BLOB_UPLOAD_CLIENT_41_001: [`uploadToBlob` shall notify the result of a blob upload to the IoT Hub service using the file upload API endpoint.]*/
+            this.clientFileUploadApi.notifyUploadComplete(uploadParams.correlationId, uploadResult, (err) => {
               if (err) {
                 if (!uploadResult.isSuccess) {
                   /*Codes_SRS_NODE_DEVICE_BLOB_UPLOAD_CLIENT_41_002: [`uploadToBlob` shall call the `_callback` callback with a `BlobUploadNotificationError` if the blob upload failed.]*/
@@ -124,4 +124,5 @@ export class BlobUploadClient implements BlobUpload {
       });
     }, done);
   }
+
 }

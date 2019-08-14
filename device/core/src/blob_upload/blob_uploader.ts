@@ -5,8 +5,27 @@
 
 import { Stream } from 'stream';
 import { errors } from 'azure-iot-common';
-import { UploadParams, BlobUploader as BlobUploaderInterface } from './blob_upload_client';
 import { tripleValueCallbackToPromise, TripleValueCallback } from 'azure-iot-common';
+
+
+/**
+ * @private
+ */
+export interface UploadParams {
+  hostName?: string;
+  containerName?: string;
+  blobName?: string;
+  sasToken?: string;
+  correlationId: string;
+}
+
+/**
+ * @private
+ */
+export interface BlobUploaderInterface {
+uploadToBlob(uploadParams: UploadParams, stream: Stream, streamLength: number, done: TripleValueCallback<any, BlobResponse>): void;
+uploadToBlob(uploadParams: UploadParams, stream: Stream, streamLength: number): Promise<any>;
+}
 
 /**
  * @private
