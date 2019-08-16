@@ -14,9 +14,13 @@ const {
 } = require("@azure/storage-blob"); // Change to "@azure/storage-blob" in your package
 
 const Protocol = require('azure-iot-device-mqtt').Mqtt;
+const HttpClient = require('azure-iot-device-http').Http;
 const Client = require('azure-iot-device').Client;
 const fs = require('fs');
 
+/**
+ * private
+ */
 function stat(filePath) {
   return new Promise((resolve, reject) => { 
     fs.stat(filePath, (err, fileStats) => {
@@ -28,76 +32,79 @@ function stat(filePath) {
   });
 } 
 
-async function main() {
+function main() {
   // Enter your storage account name and shared key
   const account = process.env.STORAGE_ACCOUNT;
   const accountKey = process.env.STORAGE_ACCOUNT_KEY;
-  var deviceConnectionString = process.env.DEVICE_CONNECTION_STRING;
-  var filePath = process.env.PATH_TO_FILE;
+  let deviceConnectionString = process.env.DEVICE_CONNECTION_STRING;
+  let filePath = process.env.PATH_TO_FILE;
+  let containerName = 'newblob' + new Date().getTime();
+  let fstats;
 
   // connect to IoT Hub
   var client = Client.fromConnectionString(deviceConnectionString, Protocol);
   
   stat(filePath).then(fileStats => {
     console.log('filestats obtained.');
-    var fileStream = fs.createReadStream(filePath);
-    return client.getStorageBlobSharedAccessSignature(blobName);
-  }).then((err, blobInfo) => {
+    fstats = fileStats;
+    return testPromise = client.getStorageBlobSAS(containerName);
+  }).then(blobInfo => {
     if (!blobInfo.hostName || !blobInfo.containerName || !blobInfo.blobName || !blobInfo.sasToken) {
       throw new errors.ArgumentError('Invalid upload parameters');
     }
-    const pipeline = StorageURL.newPipeline(blobInfo.sasToken);
-    const serviceURL = new ServiceURL();
-  }).then(() => {
-    fileStream.destroy();
-  });
-  fs.stat(filePath, function (err, fileStats) {
-    var fileStream = fs.createReadStream(filePath);
 
-    client.uploadToBlob('testblob.txt', fileStream, fileStats.size, function (err, result) {
-      if (err) {
-        console.error('error uploading file: ' + err.constructor.name + ': ' + err.message);
-      } else {
-        console.log('Upload successful - ' + result);
+    accountSas = blobInfo.sasToken;
+
+    const pipeline = StorageURL.newPipeline(new AnonymousCredential(), {
+      httpClient: HttpClient,
+      retryOptions: { maxTries: 4 }
+    });
+    const serviceURL = new ServiceURL(
+      `https://${account}.blob.core.windows.net${accountSas}`,
+      pipeline
+    );
+
+    const containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
+    
+    const blobName = "newblob" + new Date().getTime();
+    const blobURL = BlobURL.fromContainerURL(containerURL, blobName);
+    const blockBlobURL = BlockBlobURL.fromBlobURL(blobURL);
+
+    return uploadStreamToBlockBlob(
+      Aborter.timeout(30 * 60 * 1000), // Abort uploading with timeout in 30mins
+      fs.createReadStream(filePath),
+      blockBlobURL,
+      4 * 1024 * 1024,
+      20,
+      {
+        progress: ev => console.log(ev)
       }
-      fileStream.destroy();
-    });
-  });
+    );
+    
+  }).then(() => {
+    console.log("uploadFileToBlockBlob success");
 
-  // Get blob content from position 0 to the end
-  // In Node.js, get downloaded data by accessing downloadBlockBlobResponse.readableStreamBody
-  // In browsers, get downloaded data by accessing downloadBlockBlobResponse.blobBody
-  const downloadBlockBlobResponse = await blobURL.download(Aborter.none, 0);
-  console.log(
-    "Downloaded blob content",
-    await streamToString(downloadBlockBlobResponse.readableStreamBody)
-  );
-
-  // Delete container
-  await containerURL.delete(Aborter.none);
-
-  console.log("deleted container");
-}
-
-// A helper method used to read a Node.js readable stream into string
-async function streamToString(readableStream) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    readableStream.on("data", data => {
-      chunks.push(data.toString());
-    });
-    readableStream.on("end", () => {
-      resolve(chunks.join(""));
-    });
-    readableStream.on("error", reject);
-  });
-}
-
-// An async method returns a Promise object, which is compatible with then().catch() coding style.
-main()
-  .then(() => {
-    console.log("Successfully executed sample.");
-  })
-  .catch(err => {
+    const fileSize = fs.statSync(localFilePath).size;
+    const buffer = Buffer.alloc(fileSize);
+    return downloadBlobToBuffer(
+      Aborter.timeout(30 * 60 * 1000),
+      buffer,
+      blockBlobURL,
+      0,
+      undefined,
+      {
+        blockSize: 4 * 1024 * 1024, // 4MB block size
+        parallelism: 20, // 20 concurrency
+        progress: ev => console.log(ev)
+      }
+    );    
+  }).then(() => {
+    console.log("downloadBlobToBuffer success");
+    fileStream.destroy();
+  }).catch(err => {
     console.log(err.message);
   });
+}
+
+
+main()

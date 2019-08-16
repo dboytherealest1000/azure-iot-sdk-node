@@ -205,7 +205,7 @@ export class Client extends InternalClient {
         } else {
           debug('Could not obtain blob shared access signature.');
         }
-        safeCallback(_callback, err);
+        safeCallback(_callback, err, result);
       });
     }, callback);
   }

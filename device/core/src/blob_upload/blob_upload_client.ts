@@ -4,7 +4,7 @@
 'use strict';
 
 import { Stream } from 'stream';
-import { AuthenticationProvider, errorCallbackToPromise, ErrorCallback, TripleValueCallback, Callback } from 'azure-iot-common';
+import { AuthenticationProvider, errorCallbackToPromise, ErrorCallback, TripleValueCallback } from 'azure-iot-common';
 
 import { BlobUploadResult } from './blob_upload_result';
 import { BlobUploader as DefaultBlobUploader, BlobResponse } from './blob_uploader';
