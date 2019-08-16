@@ -8,7 +8,7 @@ import { AuthenticationProvider, errorCallbackToPromise, ErrorCallback, TripleVa
 
 import { BlobUploadResult } from './blob_upload_result';
 import { BlobUploader as DefaultBlobUploader, BlobResponse } from './blob_uploader';
-import { FileUploadApi as DefaultFileUploadApi } from './file_upload_api';
+import { FileUploadApi as DefaultFileUploadApi, FileUploadInterface } from './file_upload_api';
 
 import * as errors from './blob_upload_errors';
 
@@ -23,16 +23,7 @@ export interface UploadParams {
     correlationId: string;
 }
 
-/**
- * @private
- */
-export interface FileUpload {
-  setOptions(options: any): void;
-  getBlobSharedAccessSignature(blobName: string, done: Callback<UploadParams>): void;
-  getBlobSharedAccessSignature(blobName: string): Promise<UploadParams>;
-  notifyUploadComplete(correlationId: string, uploadResult: BlobUploadResult, done: (err?: Error) => void): void;
-  notifyUploadComplete(correlationId: string, uploadResult: BlobUploadResult): Promise<void>;
-}
+
 
 /**
  * @private
@@ -55,11 +46,11 @@ export interface BlobUpload {
  * @private
  */
 export class BlobUploadClient implements BlobUpload {
-  public clientFileUploadApi: FileUpload;
+  public clientFileUploadApi: FileUploadInterface;
   private _authenticationProvider: AuthenticationProvider;
   private _blobUploader: BlobUploader;
 
-  constructor(authenticationProvider: AuthenticationProvider, fileUploadApi?: FileUpload, blobUploader?: BlobUploader) {
+  constructor(authenticationProvider: AuthenticationProvider, fileUploadApi?: FileUploadInterface, blobUploader?: BlobUploader) {
     /*Codes_SRS_NODE_DEVICE_BLOB_UPLOAD_CLIENT_16_001: [`BlobUploadClient` shall throw a `ReferenceError` if `config` is falsy.]*/
     if (!authenticationProvider) throw new ReferenceError('authenticationProvider cannot be \'' + authenticationProvider + '\'');
     this._authenticationProvider = authenticationProvider;

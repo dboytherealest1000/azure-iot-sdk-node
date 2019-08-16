@@ -191,9 +191,9 @@ export class Client extends InternalClient {
    *
    * @throws {ReferenceException} If blobName or stream or streamLength is falsy.
    */
-  getBlobStorageSharedAccessSignature(blobName: string, callback: Callback<UploadParams>): void;
-  getBlobStorageSharedAccessSignature(blobName: string): Promise<UploadParams>;
-  getBlobStorageSharedAccessSignature(blobName: string, callback?: Callback<UploadParams>): Promise<UploadParams> | void {
+  getStorageBlobSAS(blobName: string, callback: Callback<UploadParams>): void;
+  getStorageBlobSAS(blobName: string): Promise<UploadParams>;
+  getStorageBlobSAS(blobName: string, callback?: Callback<UploadParams>): Promise<UploadParams> | void {
     return callbackToPromise((_callback) => {
       const retryOp = new RetryOperation(this._retryPolicy, this._maxOperationTimeout);
       retryOp.retry((opCallback) => {
@@ -210,9 +210,9 @@ export class Client extends InternalClient {
     }, callback);
   }
 
-  notifyUploadComplete(uploadResult: BlobUploadResult, callback: ErrorCallback): void;
-  notifyUploadComplete(uploadResult: BlobUploadResult): Promise<void>;
-  notifyUploadComplete(uploadResult: BlobUploadResult, callback?: ErrorCallback): Promise<void> | void {
+  notifyStorageBlobIotHubUploadComplete(uploadResult: BlobUploadResult, callback: ErrorCallback): void;
+  notifyStorageBlobIotHubUploadComplete(uploadResult: BlobUploadResult): Promise<void>;
+  notifyStorageBlobIotHubUploadComplete(uploadResult: BlobUploadResult, callback?: ErrorCallback): Promise<void> | void {
     return callbackToPromise((_callback) => {
       const retryOp = new RetryOperation(this._retryPolicy, this._maxOperationTimeout);
       retryOp.retry((opCallback) => {
