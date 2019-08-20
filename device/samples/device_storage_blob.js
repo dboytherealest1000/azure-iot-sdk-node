@@ -2,15 +2,15 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 const {
-  Aborter,
+  AnonymousCredential,
+  uploadStreamToBlockBlob,
+  uploadFileToBlockBlob,
+  Aborter, 
   BlobURL,
   BlockBlobURL,
   ContainerURL,
   ServiceURL,
   StorageURL,
-  SharedKeyCredential,
-  AnonymousCredential,
-  TokenCredential
 } = require("@azure/storage-blob"); // Change to "@azure/storage-blob" in your package
 
 const Protocol = require('azure-iot-device-mqtt').Mqtt;
@@ -18,12 +18,22 @@ const HttpClient = require('azure-iot-device-http').Http;
 const Client = require('azure-iot-device').Client;
 const fs = require('fs');
 
+const account = process.env.STORAGE_ACCOUNT;
+const deviceConnectionString = process.env.DEVICE_CONNECTION_STRING;
+const localFilePath = process.env.PATH_TO_FILE;
+const sasToken = process.env.SAS_TOKEN;
+const blobName = "newblob" + new Date().getTime();
+let fstats;
+if (!account || ! deviceConnectionString || !localFilePath) {
+  throw new errors.ArgumentError('Invalid Environment Variables');
+}
+
 /**
  * private
  */
-function stat(filePath) {
+function stat(localFilePath) {
   return new Promise((resolve, reject) => { 
-    fs.stat(filePath, (err, fileStats) => {
+    fs.stat(localFilePath, (err, fileStats) => {
       if (err) {
         reject(err);
       }
@@ -32,58 +42,52 @@ function stat(filePath) {
   });
 } 
 
-function main() {
-  // Enter your storage account name and shared key
-  const account = process.env.STORAGE_ACCOUNT;
-  const accountKey = process.env.STORAGE_ACCOUNT_KEY;
-  let deviceConnectionString = process.env.DEVICE_CONNECTION_STRING;
-  let filePath = process.env.PATH_TO_FILE;
-  let containerName = 'newblob' + new Date().getTime();
-  let fstats;
 
+async function storageBlobSAS() {
   // connect to IoT Hub
-  var client = Client.fromConnectionString(deviceConnectionString, Protocol);
-  
-  stat(filePath).then(fileStats => {
-    console.log('filestats obtained.');
-    fstats = fileStats;
-    return testPromise = client.getStorageBlobSAS(containerName);
-  }).then(blobInfo => {
-    if (!blobInfo.hostName || !blobInfo.containerName || !blobInfo.blobName || !blobInfo.sasToken) {
-      throw new errors.ArgumentError('Invalid upload parameters');
+  var client = Client.fromConnectionString(deviceConnectionString, Protocol);  
+  return client.getStorageBlobSAS(blobName);
+}
+
+
+async function uploadBlob(blobInfo) {
+  if (!blobInfo.hostName || !blobInfo.containerName || !blobInfo.blobName || !blobInfo.sasToken) {
+    throw new errors.ArgumentError('Invalid upload parameters');
+  }
+  const pipeline = StorageURL.newPipeline(new AnonymousCredential(), {
+    // httpClient: HttpClient,
+    retryOptions: { maxTries: 4 },
+    telemetry: { value: "HighLevelSample V1.0.0" }, // Customized telemetry string
+    keepAliveOptions: {
+      // Keep alive is enabled by default, disable keep alive by setting false
+      enable: false
     }
+  });
+  const serviceURL = new ServiceURL(
+    `https://${account}.blob.core.windows.net/${blobInfo.sasToken}`,
+    pipeline
+  );  
 
-    accountSas = blobInfo.sasToken;
+  // create a container
+  const containerName = `newcontainer${new Date().getTime()}`;
+  const containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
+  await containerURL.create(Aborter.none);
+  // create a blob
+  const blobURL = BlobURL.fromContainerURL(containerURL, blobName);
+  const blockBlobURL = BlockBlobURL.fromBlobURL(blobURL);
+  // parallel uploading
+  await uploadFileToBlockBlob(Aborter.none, localFilePath, blockBlobURL, {
+    blockSize: 4 * 1024 * 1024, // 4MB block size
+    parallelism: 20, // 20 concurrency
+    progress: ev => console.log(ev)
+  });
+  console.log('finished upload file to block blob');
+}
 
-    const pipeline = StorageURL.newPipeline(new AnonymousCredential(), {
-      httpClient: HttpClient,
-      retryOptions: { maxTries: 4 }
-    });
-    const serviceURL = new ServiceURL(
-      `https://${account}.blob.core.windows.net${accountSas}`,
-      pipeline
-    );
-
-    const containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
-    
-    const blobName = "newblob" + new Date().getTime();
-    const blobURL = BlobURL.fromContainerURL(containerURL, blobName);
-    const blockBlobURL = BlockBlobURL.fromBlobURL(blobURL);
-
-    return uploadStreamToBlockBlob(
-      Aborter.timeout(30 * 60 * 1000), // Abort uploading with timeout in 30mins
-      fs.createReadStream(filePath),
-      blockBlobURL,
-      4 * 1024 * 1024,
-      20,
-      {
-        progress: ev => console.log(ev)
-      }
-    );
-    
-  }).then(() => {
+storageBlobSAS()
+  .then((blobInfo) => uploadBlob(blobInfo))
+  .then(() => {
     console.log("uploadFileToBlockBlob success");
-
     const fileSize = fs.statSync(localFilePath).size;
     const buffer = Buffer.alloc(fileSize);
     return downloadBlobToBuffer(
@@ -98,13 +102,11 @@ function main() {
         progress: ev => console.log(ev)
       }
     );    
-  }).then(() => {
+  })
+  .then(() => {
     console.log("downloadBlobToBuffer success");
     fileStream.destroy();
-  }).catch(err => {
+  })
+  .catch(err => {
     console.log(err.message);
   });
-}
-
-
-main()
