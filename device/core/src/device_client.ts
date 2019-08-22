@@ -9,12 +9,14 @@ const debug = dbg('azure-iot-device:DeviceClient');
 
 import { AuthenticationProvider, RetryOperation, ConnectionString, results, Callback, ErrorCallback, callbackToPromise } from 'azure-iot-common';
 import { InternalClient, DeviceTransport } from './internal_client';
-import { BlobUploadClient, UploadParams, BlobUploadResult } from './blob_upload';
+import { BlobUploadClient, UploadParams, BlobUploadResult2 } from './blob_upload';
 import { SharedAccessSignatureAuthenticationProvider } from './sas_authentication_provider';
 import { X509AuthenticationProvider } from './x509_authentication_provider';
 import { SharedAccessKeyAuthenticationProvider } from './sak_authentication_provider';
 import { DeviceMethodRequest, DeviceMethodResponse } from './device_method';
-import { DeviceClientOptions } from './interfaces';
+import { DeviceClientOptions, BlobUploadCommonResponseStub } from './interfaces';
+
+
 
 function safeCallback(callback?: (err?: Error, result?: any) => void, error?: Error, result?: any): void {
   if (callback) callback(error, result);
@@ -210,13 +212,14 @@ export class Client extends InternalClient {
     }, callback);
   }
 
-  notifyStorageBlobIotHubUploadComplete(uploadResult: BlobUploadResult, callback: ErrorCallback): void;
-  notifyStorageBlobIotHubUploadComplete(uploadResult: BlobUploadResult): Promise<void>;
-  notifyStorageBlobIotHubUploadComplete(uploadResult: BlobUploadResult, callback?: ErrorCallback): Promise<void> | void {
+  notifyIoTHubBlobUploadComplete(uploadResponse: BlobUploadCommonResponseStub, callback: ErrorCallback): void;
+  notifyIoTHubBlobUploadComplete(uploadResponse: BlobUploadCommonResponseStub): Promise<void>;
+  notifyIoTHubBlobUploadComplete(uploadResponse: BlobUploadCommonResponseStub, callback?: ErrorCallback): Promise<void> | void {
     return callbackToPromise((_callback) => {
       const retryOp = new RetryOperation(this._retryPolicy, this._maxOperationTimeout);
       retryOp.retry((opCallback) => {
-        this._blobUploadClient.clientFileUploadApi.notifyUploadComplete(this._blobStorageUploadParams.correlationId, uploadResult, opCallback);
+        let reformattedUploadResponse = BlobUploadResult2.fromAzureStorageCallbackArgs(uploadResponse);
+        this._blobUploadClient.clientFileUploadApi.notifyUploadComplete(this._blobStorageUploadParams.correlationId, reformattedUploadResponse, opCallback);
       }, (err) => {
         safeCallback(_callback, err);
       });

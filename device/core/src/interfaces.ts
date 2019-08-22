@@ -5,6 +5,7 @@
 
 import { X509 } from 'azure-iot-common';
 import { Agent } from 'https';
+import { HttpOperationResponse } from '@azure/core-http';
 
 /**
  *
@@ -137,4 +138,9 @@ export interface DeviceClientOptions extends X509 {
    * Optional object with options specific to the AMQP transport
    */
   amqp?: AmqpTransportOptions;
+}
+
+export interface BlobUploadCommonResponseStub {
+  errorCode?: undefined | string;
+  _response?: HttpOperationResponse;
 }
