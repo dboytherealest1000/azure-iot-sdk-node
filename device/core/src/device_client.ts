@@ -9,7 +9,7 @@ const debug = dbg('azure-iot-device:DeviceClient');
 
 import { AuthenticationProvider, RetryOperation, ConnectionString, results, Callback, ErrorCallback, callbackToPromise } from 'azure-iot-common';
 import { InternalClient, DeviceTransport } from './internal_client';
-import { BlobUploadClient, UploadParams, BlobUploadResult, FileUploadApi as DefaultFileUploadApi, FileUploadInterface } from './blob_upload';
+import { BlobUploadClient, UploadParams, BlobUploadResult, DefaultFileUploadApi, FileUploadInterface } from './blob_upload';
 import { SharedAccessSignatureAuthenticationProvider } from './sas_authentication_provider';
 import { X509AuthenticationProvider } from './x509_authentication_provider';
 import { SharedAccessKeyAuthenticationProvider } from './sak_authentication_provider';
