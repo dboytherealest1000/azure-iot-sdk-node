@@ -230,6 +230,7 @@ export class Client extends InternalClient {
     return callbackToPromise((_callback) => {
       /*Codes_SRS_NODE_DEVICE_CLIENT_41_XXX: [The `uploadToBlobV2NotifyBlobUploadComplete` method shall throw a `ReferenceError` if `uploadResponse` is falsy.]*/
       if (!uploadResponse) throw new ReferenceError('uploadResponse cannot be \'' + uploadResponse + '\'');
+      if (!this._blobStorageUploadParams || !this._blobStorageUploadParams.correlationId) throw new ReferenceError('uploadToBlobV2GetStorageBlobSAS must be called before uploadToBlobV2NotifyBlobUploadComplete in order to set \'correlationId\' ');
       const retryOp = new RetryOperation(this._retryPolicy, this._maxOperationTimeout);
       retryOp.retry((opCallback) => {
         /*Codes_SRS_NODE_DEVICE_CLIENT_41_XXX: [The `uploadToBlobV2NotifyBlobUploadComplete` method shall call the `fromAzureStorageCallbackArgs2` method of the `BlobUploadResult` class to reformat the `uploadResponse`.]*/

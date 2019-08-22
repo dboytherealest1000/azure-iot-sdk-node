@@ -174,14 +174,14 @@ describe('Device Client', function () {
     });
 
     /*Tests_SRS_NODE_DEVICE_CLIENT_41_XXX: [The `uploadToBlobV2GetStorageBlobSAS` method shall call the `done` callback with no error and a result object if the call succeeds.]*/
-    it('calls the done callback with no parameters if the upload succeeded', function (done) {
+    it('calls the done callback with the upload parameters if the method call succeeded', function (done) {
       let fakeUploadParams = {
         fake: 'string'
       };  
       class FakeFileUploadApi {
         constructor() {
           this.getBlobSharedAccessSignature = function (blobName, callback) {
-            callback(fakeUploadParams);
+            callback(null,fakeUploadParams);
           };
         }
       }
@@ -206,12 +206,23 @@ describe('Device Client', function () {
     /*Tests_SRS_NODE_DEVICE_CLIENT_41_XXX: [The `uploadToBlobV2NotifyBlobUploadComplete` method shall throw a `ReferenceError` if `uploadResponse` is falsy.]*/
     [undefined, null, ''].forEach(function (uploadResponse) {
       it('throws a ReferenceError if \'uploadResponse\' is ' + uploadResponse + '\'', function() {
-        var client = new Client(new EventEmitter(), null, {});
+        var client = new Client(new EventEmitter(), null, {}, {});
+        client._blobStorageUploadParams = { correlationId: 'fakeCorrelationId' };
+
         assert.throws(function() {
-          client.uploadToBlob(uploadResponse, function() {});
+          client.uploadToBlobV2NotifyBlobUploadComplete(uploadResponse, function() {});
         });
       });
     });
+
+    /*Tests_SRS_NODE_DEVICE_CLIENT_41_XXX: [The `uploadToBlobV2NotifyBlobUploadComplete` method shall throw a `ReferenceError` if `uploadResponse` is falsy.]*/
+    it('throws a ReferenceError if \'correlationId\' is not set because uploadToBlobV2GetStorageBlobSAS has not been called', function() {
+      var client = new Client(new EventEmitter(), null, {}, {});
+      assert.throws(function() {
+        client.uploadToBlobV2NotifyBlobUploadComplete(fakeUploadResponse, function() {} );
+      });
+    });
+
 
     /*Tests_SRS_NODE_DEVICE_CLIENT_41_XXX: [The `uploadToBlobV2NotifyBlobUploadComplete` method shall call the `done` callback with an `Error` object if the notify fails.]*/
     it('calls the done callback with an Error object if the notify fails', function(done) {
@@ -222,6 +233,7 @@ describe('Device Client', function () {
       };
 
       var client = new Client(new EventEmitter(), null, null, new FakeFileUploadApi());
+      client._blobStorageUploadParams = { correlationId: 'fakeCorrelationId' };
       client.uploadToBlobV2NotifyBlobUploadComplete(fakeUploadResponse, function(err) {
         assert.instanceOf(err, Error);
         done();
@@ -237,6 +249,7 @@ describe('Device Client', function () {
       };
 
       var client = new Client(new EventEmitter(), null, null, new FakeFileUploadApi());
+      client._blobStorageUploadParams = { correlationId: 'fakeCorrelationId' };
       client.uploadToBlobV2NotifyBlobUploadComplete(fakeUploadResponse, done);
     });
   });
