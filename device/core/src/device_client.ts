@@ -186,16 +186,14 @@ export class Client extends InternalClient {
    * @description      The `uploadToBlob` method uploads a stream to a blob.
    *
    * @param {String}   blobName         The name to use for the blob that will be created with the content of the stream.
-   * @param {Stream}   stream           The data to that should be uploaded to the blob.
-   * @param {Number}   streamLength     The size of the data to that should be uploaded to the blob.
-   * @param {ErrorCallback} [done]      Optional callback to call when the upload is complete.
+   * @param {Callback} [callback]      Optional callback to call when the upload is complete.
    * @returns {Promise<void> | void}    Promise if no callback function was passed, void otherwise.
    *
    * @throws {ReferenceException} If blobName or stream or streamLength is falsy.
    */
-  getStorageBlobSAS(blobName: string, callback: Callback<UploadParams>): void;
-  getStorageBlobSAS(blobName: string): Promise<UploadParams>;
-  getStorageBlobSAS(blobName: string, callback?: Callback<UploadParams>): Promise<UploadParams> | void {
+  uploadToBlobV2GetStorageBlobSAS(blobName: string, callback: Callback<UploadParams>): void;
+  uploadToBlobV2GetStorageBlobSAS(blobName: string): Promise<UploadParams>;
+  uploadToBlobV2GetStorageBlobSAS(blobName: string, callback?: Callback<UploadParams>): Promise<UploadParams> | void {
     return callbackToPromise((_callback) => {
       const retryOp = new RetryOperation(this._retryPolicy, this._maxOperationTimeout);
       retryOp.retry((opCallback) => {
@@ -212,9 +210,9 @@ export class Client extends InternalClient {
     }, callback);
   }
 
-  notifyIoTHubBlobUploadComplete(uploadResponse: BlobUploadCommonResponseStub, callback: ErrorCallback): void;
-  notifyIoTHubBlobUploadComplete(uploadResponse: BlobUploadCommonResponseStub): Promise<void>;
-  notifyIoTHubBlobUploadComplete(uploadResponse: BlobUploadCommonResponseStub, callback?: ErrorCallback): Promise<void> | void {
+  uploadToBlobV2NotifyBlobUploadComplete(uploadResponse: BlobUploadCommonResponseStub, callback: ErrorCallback): void;
+  uploadToBlobV2NotifyBlobUploadComplete(uploadResponse: BlobUploadCommonResponseStub): Promise<void>;
+  uploadToBlobV2NotifyBlobUploadComplete(uploadResponse: BlobUploadCommonResponseStub, callback?: ErrorCallback): Promise<void> | void {
     return callbackToPromise((_callback) => {
       const retryOp = new RetryOperation(this._retryPolicy, this._maxOperationTimeout);
       retryOp.retry((opCallback) => {

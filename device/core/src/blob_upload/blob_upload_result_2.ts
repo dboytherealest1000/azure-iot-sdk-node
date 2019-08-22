@@ -23,7 +23,7 @@ export class BlobUploadResult2 {
     /*Codes_SRS_NODE_DEVICE_BLOB_UPLOAD_RESULT_16_003: [The `statusDescription` parameter shall be assigned to the the `statusDescription` property of the newly created `BlobUploadResult2` instance.]*/
     this.statusDescription = statusDescription;
   }
-  
+
   static fromAzureStorageCallbackArgs(uploadResponse: BlobUploadCommonResponseStub): BlobUploadResult2 {
     if (!uploadResponse) throw new ReferenceError('if err is null, body and response must be supplied');
     let uploadResult: BlobUploadResult2;

@@ -4,7 +4,16 @@
 // UPLOAD TO BLOB SAMPLE 
 // This is the new api for upload to blob. While before the upload to blob task was abstracted as a 
 // single API call, this API removes the Azure Storage Blob package from within the Node.js Client Library
-// and instead exposes two new APIs: getStorageBlobSAS and notifyIoTHubBlobUploadComplete
+// and instead exposes two new APIs: 
+//
+// uploadToBlobV2GetStorageBlobSAS 
+// > Using a HTTP POST, retrieve a SAS Token for the Storage Account linked to your IoT Hub.
+//
+// uploadToBlobV2NotifyBlobUploadComplete
+// > Using HTTP POST, notify IoT Hub of the status of a finished file upload (success/failure).
+// 
+// More information on Uploading Files with IoT Hub can be found here:
+// https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-devguide-file-upload
 
 
 'use strict';
@@ -12,7 +21,6 @@
 const {
   AnonymousCredential,
   uploadStreamToBlockBlob,
-  uploadFileToBlockBlob,
   Aborter, 
   BlobURL,
   BlockBlobURL,
@@ -44,7 +52,7 @@ function getFileStats(localFilePath) {
 } 
 
 async function uploadToBlob(localFilePath, client) {
-  let blobInfo = await client.getStorageBlobSAS(blobName);
+  let blobInfo = await client.uploadToBlobV2GetStorageBlobSAS(blobName);
   if (!blobInfo.hostName || !blobInfo.containerName || !blobInfo.blobName || !blobInfo.sasToken) {
     throw new errors.ArgumentError('Invalid upload parameters');
   }
@@ -71,45 +79,26 @@ async function uploadToBlob(localFilePath, client) {
   let fileStats = await getFileStats(localFilePath);
 
   // parallel uploading
-  let result = await uploadFileToBlockBlob(Aborter.none, localFilePath, blockBlobURL, {
-    blockSize: 4 * 1024 * 1024, // 4MB block size
-    parallelism: 20, // 20 concurrency
-    progress: ev => console.log(ev)
-  });
-  console.log('uploadFileToBlockBlob success');
 
-  await client.notifyIoTHubBlobUploadComplete(result);
-
-  let result2 = await uploadStreamToBlockBlob(
+  
+  let uploadStatus = await uploadStreamToBlockBlob(
     Aborter.timeout(30 * 60 * 1000), // Abort uploading with timeout in 30mins
     fs.createReadStream(localFilePath),
     blockBlobURL,
-    4 * 1024 * 1024,
-    20,
+    4 * 1024 * 1024, // 4MB block size
+    20, // 20 concurrency
     {
       progress: ev => console.log(ev)
     }
-  );
-  console.log('uploadStreamToBlockBlob success');
-
-  const fileSize = fs.statSync(localFilePath).size;
-  const buffer = Buffer.alloc(fileSize);
-  await downloadBlobToBuffer(
-    Aborter.timeout(30 * 60 * 1000),
-    buffer,
-    blockBlobURL,
-    0,
-    undefined,
-    {
-      blockSize: 4 * 1024 * 1024, // 4MB block size
-      parallelism: 20, // 20 concurrency
-      progress: ev => console.log(ev)
-    });
-    console.log("downloadBlobToBuffer success");
+    );
+    console.log('uploadStreamToBlockBlob success');
+    
+    // notify IoT Hub of upload to blob status (success/faillure)
+    await client.uploadToBlobV2NotifyBlobUploadComplete(uploadStatus);
     return 0;
 }
 
-return uploadToBlob(localFilePath, Client.fromConnectionString(deviceConnectionString, Protocol))
+uploadToBlob(localFilePath, Client.fromConnectionString(deviceConnectionString, Protocol))
   .catch((err) => {
     return new Error(err);
   });

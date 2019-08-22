@@ -5,7 +5,6 @@
 
 import { X509 } from 'azure-iot-common';
 import { Agent } from 'https';
-import { HttpOperationResponse } from '@azure/core-http';
 
 /**
  *
@@ -142,5 +141,5 @@ export interface DeviceClientOptions extends X509 {
 
 export interface BlobUploadCommonResponseStub {
   errorCode?: undefined | string;
-  _response?: HttpOperationResponse;
+  _response?: any;
 }
