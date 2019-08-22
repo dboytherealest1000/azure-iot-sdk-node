@@ -4,6 +4,7 @@
 'use strict';
 
 import { BlobResponse } from './blob_uploader';
+import { BlobUploadCommonResponseStub } from './../interfaces';
 
 /**
  * @private
@@ -66,4 +67,24 @@ export class BlobUploadResult {
 
     return uploadResult;
   }
+
+  static fromAzureStorageCallbackArgs2(uploadResponse: BlobUploadCommonResponseStub): BlobUploadResult {
+    if (!uploadResponse) throw new ReferenceError('if err is null, body and response must be supplied');
+    let uploadResult: BlobUploadResult;
+    if (uploadResponse.errorCode) {
+      const statusCode = uploadResponse._response ? uploadResponse._response.status : -1;
+      const statusDescription = uploadResponse._response ? uploadResponse._response.bodyAsText : 'no status description';
+      uploadResult = new BlobUploadResult(false, statusCode, statusDescription);
+    } else {
+        if (uploadResponse._response.status >= 200 && uploadResponse._response.status < 300) {
+          uploadResult = new BlobUploadResult(true, uploadResponse._response.status, uploadResponse._response.bodyAsText);
+        } else {
+          uploadResult = new BlobUploadResult(false, uploadResponse._response.status, uploadResponse._response.bodyAsText);
+        }
+    }
+
+    return uploadResult;
+  }
+
+
 }

@@ -27,7 +27,7 @@ const {
   ContainerURL,
   ServiceURL,
   StorageURL,
-} = require("@azure/storage-blob"); // Change to "@azure/storage-blob" in your package
+} = require("@azure/storage-blob"); // Make sure @azure/storage-blob is installed via npm
 
 const Protocol = require('azure-iot-device-mqtt').Mqtt;
 const Client = require('azure-iot-device').Client;
@@ -52,11 +52,13 @@ function getFileStats(localFilePath) {
 } 
 
 async function uploadToBlob(localFilePath, client) {
+  // OUR CODE
   let blobInfo = await client.uploadToBlobV2GetStorageBlobSAS(blobName);
-  if (!blobInfo.hostName || !blobInfo.containerName || !blobInfo.blobName || !blobInfo.sasToken) {
+  if (!blobInfo) {
     throw new errors.ArgumentError('Invalid upload parameters');
   }
 
+  // STORAGE BLOB CODE
   const pipeline = StorageURL.newPipeline(new AnonymousCredential(), {
     retryOptions: { maxTries: 4 },
     telemetry: { value: 'HighLevelSample V1.0.0' }, // Customized telemetry string
@@ -79,8 +81,6 @@ async function uploadToBlob(localFilePath, client) {
   let fileStats = await getFileStats(localFilePath);
 
   // parallel uploading
-
-  
   let uploadStatus = await uploadStreamToBlockBlob(
     Aborter.timeout(30 * 60 * 1000), // Abort uploading with timeout in 30mins
     fs.createReadStream(localFilePath),
@@ -92,7 +92,8 @@ async function uploadToBlob(localFilePath, client) {
     }
     );
     console.log('uploadStreamToBlockBlob success');
-    
+    // END STORAGE CODE
+
     // notify IoT Hub of upload to blob status (success/faillure)
     await client.uploadToBlobV2NotifyBlobUploadComplete(uploadStatus);
     return 0;

@@ -141,5 +141,8 @@ export interface DeviceClientOptions extends X509 {
 
 export interface BlobUploadCommonResponseStub {
   errorCode?: undefined | string;
-  _response?: any;
+  _response?: {
+    status?: number;
+    bodyAsText?: string;
+  };
 }

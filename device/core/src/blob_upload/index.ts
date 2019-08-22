@@ -6,4 +6,4 @@
 export { BlobUploadClient, UploadParams } from './blob_upload_client';
 export { BlobSasError, BlobUploadNotificationError } from './blob_upload_errors';
 export { BlobUploadResult } from './blob_upload_result';
-export { BlobUploadResult2 } from './blob_upload_result_2';
+export { FileUploadApi as DefaultFileUploadApi, FileUploadInterface } from './file_upload_api';
