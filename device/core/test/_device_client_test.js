@@ -174,7 +174,7 @@ describe('Device Client', function () {
     });
 
     /*Tests_SRS_NODE_DEVICE_CLIENT_41_XXX: [The `uploadToBlobV2GetStorageBlobSAS` method shall call the `done` callback with no error and a result object if the call succeeds.]*/
-    it('calls the done callback with the upload parameters if the method call succeeded', function (done) {
+    it.only('calls the done callback with the upload parameters if the method call succeeded', function (done) {
       let fakeUploadParams = {
         fake: 'string'
       };  
@@ -188,7 +188,7 @@ describe('Device Client', function () {
 
       var client = new Client(new EventEmitter(), null, null, new FakeFileUploadApi());
       client.uploadToBlobV2GetStorageBlobSAS('blobName', function(err, result) {
-        assert.isFalse(err);
+        assert.isNull(err);
         assert.isNotNull(result);
         done();
       });
